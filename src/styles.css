@@ -1,0 +1,68 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #14131a;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+#rotate {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 24px;
+  background: #14131a;
+  color: #d9b144;
+  text-align: center;
+  font: bold 20px/1.4 "Courier New", monospace;
+  letter-spacing: 1px;
+}
+
+#rotate.show { display: flex; }
+
+#rotate .phone {
+  width: 56px;
+  height: 96px;
+  border: 6px solid #d9b144;
+  border-radius: 8px;
+  animation: tilt 1.8s ease-in-out infinite;
+}
+
+#rotate small {
+  color: #a9a492;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+@keyframes tilt {
+  0%, 25% { transform: rotate(0); }
+  60%, 100% { transform: rotate(90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #rotate .phone { animation: none; transform: rotate(90deg); }
+}
