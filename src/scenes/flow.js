@@ -14,8 +14,8 @@ export function spawnZombie() {
   if (side === 2) x = cam.x - 22;
   if (side === 3) x = cam.x + W + 22;
   G.zombies.push({
-    x, y, hp: G.level.hp, sp: G.level.speed + rand(-4, 10),
-    kx: 0, ky: 0, stun: 0, hitT: 0, walkT: rand(0, 2), flip: false,
+    x, y, hp: 1, sp: CONFIG.zombieSpeed + rand(-4, 10),
+    kx: 0, ky: 0, stun: 0, walkT: rand(0, 2), flip: false,
   });
 }
 
@@ -43,31 +43,18 @@ export function startBattle() {
   G.lock = 0.3;
   G.spawnT = 0;
   G.groanT = 2;
-  G.immunityT = 0;
-  G.biteT = 0;
-  P.hurt = 0;
+  G.shieldT = 0;
   resetPowers();
   for (let i = 0; i < 4; i++) spawnZombie();
 }
 
 export function newGame() {
-  G.phase = 0;
   G.beers = 0;
   G.hallP = 0;
   speech.bag = [];
   P.x = 320;
   P.y = 190;
   startBattle();
-}
-
-export function startLevel(key) {
-  G.level = CONFIG.levels[key];
-  newGame();
-}
-
-export function goTitle() {
-  G.scene = 'title';
-  G.lock = 0.3;
 }
 
 export function startBuild() {
@@ -79,14 +66,9 @@ export function startBuild() {
   G.lock = 0.3;
   speech.t = 0;
   G.build = {
-    t: 0, from: G.hallP, to: CONFIG.phases[G.phase].builtTo, done: false, alertT: 0, sip: 0,
+    t: 0, sip: 0,
     workers: Array.from({ length: 7 }, makeWorker),
   };
-}
-
-export function goCollect() {
-  G.phase++;
-  startBattle();
 }
 
 export function startEnd() {

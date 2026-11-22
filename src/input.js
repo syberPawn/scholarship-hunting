@@ -42,7 +42,7 @@ function onPointerDown(e) {
       stick.cy = p.y;
       stick.dx = 0;
       stick.dy = 0;
-      try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* pointer already gone */ }
+      try { canvas.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     }
   } else {
     mouse.down = true;

@@ -4,8 +4,6 @@ import { clamp, lerp } from './utils.js';
 // Everything that changes during play lives here, so any module can read it.
 export const G = {
   scene: 'title',
-  level: CONFIG.levels.easy,
-  phase: 0,
   money: 0,
   peak: 0,
   kills: 0,
@@ -22,14 +20,13 @@ export const G = {
   parts: [],
   spawnT: 0,
   groanT: 2,
-  immunityT: 0,
-  biteT: 0,
+  shieldT: 0,
   build: null,
   ending: null,
   btns: [],
 };
 
-export const P = { x: 320, y: 190, aim: 0, cd: 0, walkT: 0, moving: false, flash: 0, hurt: 0 };
+export const P = { x: 320, y: 190, aim: 0, cd: 0, walkT: 0, moving: false, flash: 0 };
 export const cam = { x: 0, y: 0 };
 
 export const power = {};
@@ -41,10 +38,8 @@ export function resetPowers() {
 resetPowers();
 export const powerOn = k => power[k].active > 0;
 
-export const lastPhase = () => CONFIG.phases.length - 1;
-export const target = () => G.level.notes * CONFIG.noteValue;
+export const target = () => CONFIG.notes * CONFIG.noteValue;
 export const isFull = () => G.money >= target();
-// Uses the highest funds reached, so bites never bring the crowds back.
 export const progress = () => clamp(G.peak / target());
-export const crowdCap = p => Math.round(lerp(G.level.crowd[0], G.level.crowd[1], p));
-export const spawnGap = p => lerp(G.level.delay[0], G.level.delay[1], p);
+export const crowdCap = p => Math.round(lerp(CONFIG.crowd[0], CONFIG.crowd[1], p));
+export const spawnGap = p => lerp(CONFIG.spawnDelay[0], CONFIG.spawnDelay[1], p);

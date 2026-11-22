@@ -13,7 +13,7 @@ const results = [];
 const check = (name, ok, extra = '') => results.push(`${ok ? 'PASS' : 'FAIL'}  ${name} ${extra}`);
 const errors = [];
 
-const ZOMBIE = `(over) => Object.assign({ x: P.x + 40, y: P.y, hp: 99999, sp: 30, kx: 0, ky: 0, stun: 0, hitT: 0, walkT: 0, flip: false }, over || {})`;
+const ZOMBIE = `(over) => Object.assign({ x: P.x + 40, y: P.y, hp: 99999, sp: 30, kx: 0, ky: 0, stun: 0, walkT: 0, flip: false }, over || {})`;
 
 async function phone(browser, url) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
@@ -38,25 +38,14 @@ async function phone(browser, url) {
   }, [ZOMBIE, list]);
 
   await page.screenshot({ path: out('01-title') });
-  await tapGame(80, 127);
+  await tapGame(160, 127);
   await page.waitForTimeout(200);
-  check('EASY tap enters battle', await page.evaluate(() => G.scene === 'battle' && G.level === CONFIG.levels.easy && target() === 20000));
-  check('game has 1 phase', (await page.evaluate(() => CONFIG.phases.length)) === 1);
+  check('PLAY tap enters battle', await page.evaluate(() => G.scene === 'battle' && target() === 20000));
+  check('no difficulty levels', await page.evaluate(() => !('levels' in CONFIG) && !('media' in CONFIG.powerups)));
   const curve = await page.evaluate(() => [0, 0.5, 1].map(p => ({ max: crowdCap(p), delay: spawnGap(p) })));
   check('students thin out but never stop', curve[0].max > curve[1].max && curve[1].max > curve[2].max && curve[2].max >= 1 && curve[0].delay < curve[2].delay, JSON.stringify(curve));
   const groanList = await page.evaluate(() => ({ list: GROANS, rare: RARE_GROAN }));
   check('student lines', groanList.list.join() === 'FEE DUES...,TUITION FEE...,SCHOLARSHIP...,PLEASE...' && groanList.rare === 'VASTAGUNA HUIYAAA....');
-  const peakTest = await page.evaluate(() => {
-    const m = G.money, p = G.peak;
-    G.peak = target() / 2;
-    G.money = 0;
-    const r = progress();
-    G.money = m;
-    G.peak = p;
-    return r;
-  });
-  check('bites do not bring crowds back', peakTest === 0.5, `progress=${peakTest}`);
-
   // Joystick
   const cdp = await ctx.newCDPSession(page);
   const [sx, sy] = await client(60, 130);
@@ -92,44 +81,25 @@ async function phone(browser, url) {
   check('walking over money adds Rs500', m1 === m0 + 500, `${m0} -> ${m1}`);
   check('no develop button before full', (await page.evaluate(() => G.btns.length)) === 0);
 
-  // Bites take funds.
-  await page.evaluate(() => { G.spawnT = 99; resetPowers(); power.narrative.timer = 999; power.media.timer = 999; G.money = 1000; });
-  await setZombies([{}]);
-  await page.evaluate(() => { G.zombies[0].x = P.x + 18; G.zombies[0].y = P.y; });
-  await page.waitForFunction(() => G.money < 1000, null, { timeout: 15000 });
-  await page.screenshot({ path: out('03-bite') });
-  check('zombie bite reduces funds', true, await page.evaluate(() => `money=${G.money}`));
-
-  await page.evaluate(() => { G.money = 50; G.zombies[0].x = P.x + 12; G.zombies[0].y = P.y; G.biteT = 0; });
-  await page.waitForFunction(() => G.money === 0, null, { timeout: 15000 });
-  await page.waitForTimeout(1200);
-  const floor = await page.evaluate(() => ({ money: G.money, scene: G.scene }));
-  check('funds stop at 0 and he cannot lose', floor.money === 0 && floor.scene === 'battle', JSON.stringify(floor));
-
-  // Media++ blocks bites for 15 seconds.
-  await page.evaluate(() => { power.media.timer = 0.01; G.zombies = []; });
-  await page.waitForFunction(() => power.media.pack !== null, null, { timeout: 3000 });
-  await page.evaluate(() => { power.narrative.pack = { x: cam.x + 90, y: cam.y + 60, seed: 0 }; });
-  await page.waitForTimeout(100);
-  await page.screenshot({ path: out('04-power-ups') });
-  await page.evaluate(() => { power.narrative.pack = null; G.money = 1000; const p = power.media.pack; p.x = P.x; p.y = P.y - 8; });
-  await page.waitForFunction(() => powerOn('media'), null, { timeout: 2000 });
-  const mediaStart = Date.now();
-  await setZombies([{}]);
-  await page.evaluate(() => { G.zombies[0].x = P.x + 18; G.zombies[0].y = P.y; });
+  // One shot kills, and students cannot take funds.
+  await page.evaluate(() => { G.spawnT = 99; resetPowers(); power.narrative.timer = 999; G.money = 1000; G.kills = 0; });
+  await setZombies([{ hp: 1, sp: 0, stun: 99 }]);
+  await page.waitForFunction(() => G.kills === 1, null, { timeout: 3000 });
+  check('one shot kills a student', await page.evaluate(() => G.zombies.length === 0));
+  await setZombies([{}, {}, {}]);
+  await page.evaluate(() => { [[12, 0], [-12, 0], [0, 10]].forEach(([dx, dy], i) => { G.zombies[i].x = P.x + dx; G.zombies[i].y = P.y + dy; }); });
   await page.waitForTimeout(3000);
-  await page.screenshot({ path: out('05-media-active') });
-  check('Media++ blocks bites', (await page.evaluate(() => G.money)) === 1000);
-  await page.evaluate(() => { power.media.timer = 0; });
-  await page.waitForTimeout(200);
-  check('no second Media++ while active', await page.evaluate(() => power.media.pack === null));
-  await page.evaluate(() => { power.media.timer = 999; });
-  await page.waitForFunction(() => !powerOn('media'), null, { timeout: 18000 });
-  const mediaSecs = (Date.now() - mediaStart) / 1000;
-  check('Media++ lasts about 15 seconds', mediaSecs > 14 && mediaSecs < 16, `${mediaSecs.toFixed(1)}s`);
-  await page.evaluate(() => { G.zombies[0].x = P.x + 12; G.zombies[0].y = P.y; G.biteT = 0; });
-  await page.waitForFunction(() => G.money < 1000, null, { timeout: 15000 });
-  check('bites resume after Media++', true);
+  await page.screenshot({ path: out('03-crowded') });
+  const crowded = await page.evaluate(() => ({ money: G.money, scene: G.scene, near: G.zombies.filter(z => Math.hypot(z.x - P.x, z.y - P.y) < 13).length }));
+  check('students touching him take no funds', crowded.money === 1000 && crowded.scene === 'battle', JSON.stringify(crowded));
+  check('students are repelled', crowded.near === 0, JSON.stringify(crowded));
+  await page.evaluate(() => { G.zombies[0].x = P.x + 12; G.zombies[0].y = P.y; G.shieldT = 0; G.popups = []; });
+  await page.waitForTimeout(100);
+  check('Democracy++ shows on contact', await page.evaluate(() => G.popups.some(p => p.s === 'DEMOCRACY++')));
+  await page.evaluate(() => { G.zombies = []; power.narrative.pack = { x: cam.x + 90, y: cam.y + 60, seed: 0 }; });
+  await page.waitForTimeout(100);
+  await page.screenshot({ path: out('04-power-up') });
+  await page.evaluate(() => { power.narrative.pack = null; });
 
   // Narrative++
   await page.evaluate(() => { power.narrative.timer = 999; G.money = 0; });
@@ -185,7 +155,6 @@ async function phone(browser, url) {
 
   await page.waitForFunction(() => G.scene === 'build' && G.build.t > 16, null, { timeout: 30000 });
   await page.screenshot({ path: out('08-hall-mid') });
-  check('no Funds Ran Out mid-build', await page.evaluate(() => !G.build.done && G.btns.length === 0));
   const buildStart = Date.now() - (await page.evaluate(() => G.build.t)) * 1000;
   await page.waitForFunction(() => G.scene === 'end', null, { timeout: 40000 });
   const buildSecs = (Date.now() - buildStart) / 1000;
@@ -198,29 +167,12 @@ async function phone(browser, url) {
   await page.screenshot({ path: out('10-walking-in') });
   await page.waitForFunction(() => G.ending.t > 7.9);
   await page.screenshot({ path: out('11-moved-in') });
-  await page.waitForFunction(() => G.ending.t > 8.8 && G.btns.length === 2);
+  await page.waitForFunction(() => G.ending.t > 8.8 && G.btns.length === 1);
   await page.screenshot({ path: out('12-game-over') });
-  await tapGame(112, 127);
-  await page.waitForTimeout(200);
-  const again = await page.evaluate(() => ({ scene: G.scene, phase: G.phase, hall: G.hallP, beers: G.beers, money: G.money, easy: G.level === CONFIG.levels.easy }));
-  check('Play Again restarts on the same level', again.scene === 'battle' && again.phase === 0 && again.hall === 0 && again.beers === 0 && again.money === 0 && again.easy, JSON.stringify(again));
-
-  // Change Level, then each level's settings.
-  await page.evaluate(() => { G.ending = { t: 20, workers: [], sip: 0 }; G.scene = 'end'; G.lock = 0; });
-  await page.waitForFunction(() => G.btns.length === 2, null, { timeout: 3000 });
-  await tapGame(208, 127);
-  await page.waitForTimeout(450);
-  check('Change Level returns to title', (await page.evaluate(() => G.scene)) === 'title');
-  await tapGame(240, 127);
-  await page.waitForTimeout(450);
-  const hard = await page.evaluate(() => ({ ok: G.level === CONFIG.levels.hard, target: target(), hp: G.zombies[0].hp }));
-  check('HARD applies', hard.ok && hard.target === 30000 && hard.hp === 4, JSON.stringify(hard));
-  await page.evaluate(() => { G.scene = 'title'; G.lock = 0; });
-  await page.waitForFunction(() => G.btns.length === 3, null, { timeout: 3000 });
   await tapGame(160, 127);
-  await page.waitForTimeout(450);
-  const medium = await page.evaluate(() => ({ ok: G.level === CONFIG.levels.medium, target: target(), hp: G.zombies[0].hp }));
-  check('MEDIUM applies', medium.ok && medium.target === 25000 && medium.hp === 4, JSON.stringify(medium));
+  await page.waitForTimeout(200);
+  const again = await page.evaluate(() => ({ scene: G.scene, hall: G.hallP, beers: G.beers, money: G.money }));
+  check('Play Again restarts', again.scene === 'battle' && again.hall === 0 && again.beers === 0 && again.money === 0, JSON.stringify(again));
   await ctx.close();
 }
 
@@ -229,9 +181,9 @@ async function desktop(browser, url) {
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push('desktop pageerror: ' + e.message));
   await openGame(page, url);
-  await page.mouse.click(320, 508);
+  await page.mouse.click(640, 508);
   await page.waitForTimeout(450);
-  check('desktop level button starts the game', (await page.evaluate(() => G.scene)) === 'battle');
+  check('desktop PLAY button starts the game', (await page.evaluate(() => G.scene)) === 'battle');
   const x0 = await page.evaluate(() => P.x);
   await page.keyboard.down('KeyD');
   await page.waitForTimeout(500);

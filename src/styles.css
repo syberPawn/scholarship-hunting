@@ -52,12 +52,6 @@ canvas {
   animation: tilt 1.8s ease-in-out infinite;
 }
 
-#rotate small {
-  color: #a9a492;
-  font-size: 14px;
-  font-weight: normal;
-}
-
 @keyframes tilt {
   0%, 25% { transform: rotate(0); }
   60%, 100% { transform: rotate(90deg); }

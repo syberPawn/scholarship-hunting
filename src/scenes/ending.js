@@ -12,7 +12,7 @@ import { PAL, polStand, polWalkA, polWalkB, put } from '../sprites.js';
 import { G } from '../state.js';
 import { button, drawBubble } from '../ui.js';
 import { clamp } from '../utils.js';
-import { goTitle, newGame } from './flow.js';
+import { newGame } from './flow.js';
 import {
   CHAIR_FEET, CHAIR_X, drawBottles, drawChair, drawHall, drawSign, drawSittingPolitician, drawWorkers, sipTick,
 } from './site.js';
@@ -69,8 +69,7 @@ function drawGameOver() {
   rect(x, y, w, h, '#f2ead2');
   txt('GAME OVER', W / 2, y + 7, '#b23a3a', { s: 2, align: 'c' });
   txt('THE POLITICIAN ALWAYS WINS', W / 2, y + 27, PAL.k, { align: 'c' });
-  button(66, y + 44, 92, 26, 'PLAY AGAIN', newGame, '#d9b144');
-  button(162, y + 44, 92, 26, 'CHANGE LEVEL', goTitle, '#c4c0b0');
+  button(110, y + 44, 100, 26, 'PLAY AGAIN', newGame, '#d9b144');
 }
 
 export function renderEnd() {

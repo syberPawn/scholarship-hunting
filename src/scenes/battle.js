@@ -9,7 +9,7 @@ import {
   PAL, POWER_LOOK, banknote, polStand, polWalkA, polWalkB, put, zombieA, zombieB, zombieDead,
 } from '../sprites.js';
 import {
-  G, P, cam, crowdCap, isFull, lastPhase, power, powerOn, progress, spawnGap, target,
+  G, P, cam, crowdCap, isFull, power, powerOn, progress, spawnGap, target,
 } from '../state.js';
 import { button } from '../ui.js';
 import { clamp, pick, rand } from '../utils.js';
@@ -106,15 +106,12 @@ function updatePlayer(dt) {
   }
 }
 
-// Zombies bite away his funds, but he himself can never lose.
+// Students who reach him bounce off his Democracy++ shield.
 function updateZombies(dt) {
-  G.immunityT -= dt;
-  G.biteT -= dt;
-  P.hurt -= dt;
+  G.shieldT -= dt;
   for (const z of G.zombies) {
     const a = Math.atan2(P.y - z.y, P.x - z.x);
     z.stun -= dt;
-    z.hitT -= dt;
     z.walkT += dt;
     z.flip = P.x < z.x;
     if (z.stun <= 0) {
@@ -130,17 +127,8 @@ function updateZombies(dt) {
       z.kx = -Math.cos(a) * 200;
       z.ky = -Math.sin(a) * 200;
       z.stun = 0.4;
-      if (powerOn('media')) {
-        if (G.immunityT <= 0) {
-          popup(P.x, P.y - 28, CONFIG.powerups.media.label, PAL.U, 0.8);
-          G.immunityT = 0.9;
-        }
-      } else if (G.biteT <= 0 && G.money > 0) {
-        G.money = Math.max(0, G.money - G.level.biteLoss);
-        G.biteT = CONFIG.biteCooldown;
-        P.hurt = 0.12;
-        popup(P.x, P.y - 28, '-₹' + G.level.biteLoss, '#ff6a5a', 0.7);
-      }
+      if (G.shieldT <= 0) popup(P.x, P.y - 28, CONFIG.shieldLabel, PAL.U, 0.8);
+      G.shieldT = 0.6;
     }
   }
 
@@ -179,9 +167,6 @@ function updateBullets(dt) {
     for (const z of G.zombies) {
       if (z.hp > 0 && Math.hypot(b.x - z.x, b.y - (z.y - 8)) < 10) {
         z.hp--;
-        z.hitT = 0.09;
-        z.kx += b.vx * 0.07; // keep small, or zombies can never reach him
-        z.ky += b.vy * 0.07;
         puff(b.x, b.y, '#dcd7c4', 2);
         return false;
       }
@@ -244,18 +229,14 @@ export function updateBattle(dt) {
 
 function drawZombie(z) {
   const fr = Math.floor(z.walkT * 5) % 2 ? zombieA : zombieB;
-  put(fr, z.x - 8 - cam.x, z.y - 16 - cam.y, z.flip, z.hitT > 0);
+  put(fr, z.x - 8 - cam.x, z.y - 16 - cam.y, z.flip);
 }
 
 function drawPlayer() {
   const x = Math.round(P.x - cam.x), y = Math.round(P.y - cam.y);
   const fr = P.moving ? (Math.floor(P.walkT * 9) % 2 ? polWalkA : polWalkB) : polStand;
-  put(fr, x - 8, y - 20, false, P.hurt > 0);
-  const shield = power.media.active;
-  if (shield > 0 && (shield > 2 || Math.floor(G.time * 8) % 2)) {
-    pxRing(x, y - 10, 15, PAL.U);
-    pxRing(x, y - 10, 16, PAL.U);
-  }
+  put(fr, x - 8, y - 20);
+  if (G.shieldT > 0) pxRing(x, y - 10, 15, PAL.U);
   const c = Math.cos(P.aim), s = Math.sin(P.aim);
   const hx = x + c * 5, hy = y - 11 + s * 3;
   pxLine(hx, hy, hx + c * 8, hy + s * 8, PAL.k, 2);
@@ -296,25 +277,13 @@ function drawField() {
 
 function drawHud() {
   rect(0, 0, W, 14, 'rgba(15,14,20,.82)');
-  if (lastPhase() > 0) txt(`PHASE ${G.phase + 1}/${lastPhase() + 1}`, 4, 3, '#d9d6c8');
-  txt(G.level.label, 4, 3, G.level.color);
   const barX = 84, barW = 152, frac = G.money / target();
   rect(barX - 1, 1, barW + 2, 11, PAL.k);
   rect(barX, 2, barW, 9, '#2f2c38');
   rect(barX, 2, Math.round(barW * frac), 9, isFull() && Math.floor(G.time * 6) % 2 ? '#bff2b0' : '#2f9a44');
   txt(`₹${G.money} / ₹${target()}`, W / 2, 3, '#ffffff', { align: 'c', ol: PAL.k });
-  txt(`HALL ${Math.round(G.hallP * 100)}%`, W - 4, 3, '#d9d6c8', { align: 'r' });
   if (isFull()) button(92, 18, 136, 22, 'DEVELOP YOUR TOWN', startBuild, Math.floor(G.time * 4) % 2 ? '#f2c744' : '#d9b144');
 
-  // Progress to the next scholarship
-  txt('NEXT ₹', 4, 17, PAL.M, { ol: PAL.k });
-  const needed = CONFIG.killsPerScholarship, got = G.kills % needed;
-  for (let i = 0; i < needed; i++) {
-    rect(43 + i * 7, 17, 5, 7, PAL.k);
-    rect(44 + i * 7, 18, 3, 5, i < got ? PAL.M : '#2f2c38');
-  }
-
-  // Power-up timers
   let timerY = 17;
   for (const [k, cfg] of Object.entries(CONFIG.powerups)) {
     if (!powerOn(k)) continue;
@@ -333,11 +302,10 @@ function drawJoystick() {
     pxRing(stick.cx, stick.cy, stick.radius, '#ffffff');
     rect(stick.cx + stick.dx * stick.radius - 5, stick.cy + stick.dy * stick.radius - 5, 10, 10, '#ffffff');
     g.globalAlpha = 1;
-  } else if (G.phase === 0 && G.kills < 15) {
+  } else if (G.kills < 15) {
     g.globalAlpha = 0.45;
     pxRing(46, 134, 22, '#ffffff');
     g.globalAlpha = 1;
-    txt('MOVE', 46, 131, '#ffffff', { align: 'c', ol: PAL.k });
   }
 }
 

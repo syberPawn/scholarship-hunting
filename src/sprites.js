@@ -106,19 +106,8 @@ const ammoPack = sprite([
   'kaaaaaaaaaaak',
   'kkkkkkkkkkkkk',
 ]);
-const tvSet = sprite([
-  '..D.....D....',
-  '...D...D.....',
-  'kkkkkkkkkkkkk',
-  'kUUUUUUUUkyyk',
-  'kUuUUUUuUkuuk',
-  'kUUUUUUUUkyyk',
-  'kUUUUUUUUkuuk',
-  'kkkkkkkkkkkkk',
-]);
 export const POWER_LOOK = {
   narrative: { sprite: ammoPack, col: PAL.A, glow: 'rgba(232,122,214,.3)' },
-  media: { sprite: tvSet, col: PAL.U, glow: 'rgba(143,192,255,.3)' },
 };
 
 const WORKER_TOP = [

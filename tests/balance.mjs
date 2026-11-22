@@ -1,4 +1,4 @@
-// Fast-forwards the real game logic on every level with two simulated players:
+// Fast-forwards the real game logic with two simulated players:
 // "sharp" always heads for the nearest money, "casual" re-decides once a second and dawdles.
 
 import { openGame, startGame } from './helpers.mjs';
@@ -12,14 +12,12 @@ try {
   const rows = await page.evaluate(() => {
     const dt = 1 / 60, rows = [];
     G.touchMode = true;
-    for (const key of Object.keys(CONFIG.levels)) for (const mode of ['sharp', 'casual']) for (let run = 0; run < 12; run++) {
-      G.level = CONFIG.levels[key];
-      G.phase = 0;
+    for (const mode of ['sharp', 'casual']) for (let run = 0; run < 12; run++) {
       startBattle();
       P.x = 320;
       P.y = 190;
       stick.id = 1;
-      let t = 0, bitten = 0, last = G.money, think = 0, dx = 0, dy = 0;
+      let t = 0, think = 0, dx = 0, dy = 0;
       while (!isFull() && t < 900) {
         think -= dt;
         if (mode === 'sharp' || think <= 0) {
@@ -40,21 +38,19 @@ try {
         stick.dy = dy;
         updateBattle(dt);
         updateEffects(dt);
-        if (G.money < last) bitten += last - G.money;
-        last = G.money;
         t += dt;
       }
-      rows.push({ key, mode, t, bitten, full: isFull(), kills: G.kills, target: target() });
+      rows.push({ mode, t, full: isFull(), kills: G.kills, target: target() });
     }
     stick.id = null;
     return rows;
   });
 
-  for (const key of ['easy', 'medium', 'hard']) for (const mode of ['sharp', 'casual']) {
-    const r = rows.filter(x => x.key === key && x.mode === mode);
+  for (const mode of ['sharp', 'casual']) {
+    const r = rows.filter(x => x.mode === mode);
     const ts = r.map(x => x.t).sort((a, b) => a - b);
     const avg = f => Math.round(r.reduce((s, x) => s + f(x), 0) / r.length);
-    console.log(`${key.padEnd(6)} ${mode.padEnd(6)} filled ${r.filter(x => x.full).length}/${r.length}, target Rs${r[0].target}, ${ts[0].toFixed(0)}-${ts[r.length - 1].toFixed(0)}s (median ${ts[6].toFixed(0)}s), avg bitten Rs${avg(x => x.bitten)}, avg kills ${avg(x => x.kills)}`);
+    console.log(`${mode.padEnd(6)} filled ${r.filter(x => x.full).length}/${r.length}, target Rs${r[0].target}, ${ts[0].toFixed(0)}-${ts[r.length - 1].toFixed(0)}s (median ${ts[6].toFixed(0)}s), avg kills ${avg(x => x.kills)}`);
   }
 } finally {
   await browser.close();
