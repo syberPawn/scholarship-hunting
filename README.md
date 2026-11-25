@@ -74,4 +74,4 @@ tests/
 
 ## Author
 
-Built by [Sangamlung Gangmei](https://etukwaru.online/), a computer science engineer, AI and automation expert and WhatsApp Cloud API expert based in Dimapur, Nagaland. More work at [etukwaru.online](https://etukwaru.online/), on [LinkedIn](https://www.linkedin.com/in/sangamlung) and [GitHub](https://github.com/syberPawn).
+Built by [Sangamlung Gangmei](https://etukwaru.online/), a freelance software engineer based in Dimapur, Nagaland. More work at [etukwaru.online](https://etukwaru.online/), on [LinkedIn](https://www.linkedin.com/in/sangamlung) and [GitHub](https://github.com/syberPawn).
